@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>German Learning Assistant</title>
+    <style>
+     body {
+    font-family: Arial, sans-serif;
+    background-color: #121212;
+    color: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+}
+
+.container {
+    background-color: #1f1f1f;
+    padding: 30px; /* Increased padding for more space inside the container */
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+    width: 100%;
+    margin-top: 20px;
+    position: relative;
+}
+
+h1, h2 {
+    text-align: center;
+    margin-bottom: 30px; /* Increased margin below the heading */
+    background: linear-gradient(60deg, #121212, #DD0000, #F8C90D);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 5px; /* Margin below label */
+}
+
+.input-select-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px; /* Increased margin between input/select groups */
+}
+
+input, select {
+    padding: 12px; /* Increased padding for better spacing inside fields */
+    margin-top: 5px;
+    border: 1px solid #333;
+    border-radius: 5px;
+    background-color: #2c2c2c;
+    color: #e0e0e0;
+}
+
+input {
+    width: 100%; /* Full width of container */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+select {
+    width: calc(100% - 2px); /* Slightly shorter to account for border */
+    box-sizing: border-box;
+}
+
+button {
+    width: 100%;
+    padding: 12px; /* Increased padding for a larger button */
+    background: linear-gradient(60deg, #121212, #DD0000, #F8C90D);
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-top: 20px; /* Margin above the button */
+}
+
+button:hover {
+    background: linear-gradient(45deg, #5e35b1, #f57c00, #00A859);
+}
+
+.response {
+    margin-top: 20px;
+    white-space: pre-line;
+}
+
+.spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 8px solid #f3f3f3; /* Light grey */
+    border-top: 8px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>German Learning Assistant</h2>
+    <form id="studentForm">
+        <label for="responseLanguage">Response Language:</label>
+        <select id="responseLanguage" name="responseLanguage">
+            <option value="AZ">Azerbaijani</option>
+            <option value="EN">English</option>
+            <option value="RU">Russian</option>
+        </select>
+
+        <label for="age">Age:</label>
+        <input type="number" id="age" name="age" min="1" required>
+
+        <label for="gender">Gender:</label>
+        <select id="gender" name="gender">
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+        </select>
+
+        <label for="aim">Aim:</label>
+        <input type="text" id="aim" name="aim" required>
+
+        <label for="learn">Learning Type:</label>
+        <select id="learn" name="learn">
+            <option value="VOCABULARY">Vocabulary</option>
+            <option value="CHAT">Chat</option>
+            <option value="TEXT">Text</option>
+        </select>
+
+        <label for="academic">Academic German:</label>
+        <select id="academic" name="academic">
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+        </select>
+
+        <label for="purpose">Purpose:</label>
+        <input type="text" id="purpose" name="purpose" required>
+
+        <button type="submit">Submit</button>
+    </form>
+
+    <div class="response" id="responseOutput"></div>
+
+    <!-- Spinner Element -->
+    <div id="spinner" class="spinner" style="display: none;"></div>
+</div>
+
+<!-- Import Google Generative AI SDK -->
+<script type="importmap">
+    {
+        "imports": {
+            "@google/generative-ai": "https://esm.run/@google/generative-ai"
+        }
+    }
+</script>
+<script type="module">
+    import { GoogleGenerativeAI } from "@google/generative-ai";
+
+    const API_KEY = "AIzaSyB3GRRnXnOsnRJOhPpLQtWvKf4Bs1Hx-nU"; // Replace with your actual API key
+
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+
+    const form = document.getElementById('studentForm');
+    const responseOutput = document.getElementById('responseOutput');
+    const spinner = document.getElementById('spinner');
+
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const formData = new FormData(form);
+
+        const data = {
+            responseLanguage: formData.get('responseLanguage'),
+            age: formData.get('age'),
+            gender: formData.get('gender'),
+            aim: formData.get('aim'),
+            learn: formData.get('learn'),
+            academic: formData.get('academic') === 'true',
+            purpose: formData.get('purpose')
+        };
+
+        let promptMsg = `
+        Generate a German learning assistant response for a ${data.age} year old ${data.gender}. 
+        The purpose is: ${data.purpose}. Learning type is: ${data.learn}. 
+        Academic German: ${data.academic ? 'Yes' : 'No'}. 
+        Respond in ${data.responseLanguage}. You are a german language teacher. Based on user's age, gender (optional), aim, " +
+                "is it academic or not (if it's true, it means academic, otherwise not), and purpose give, teach " +
+                "the best way of german language. Give the response based on selected response language. " +
+                "If it's \"AZ\", it means Azerbaijani Language, if it's \"EN\", it means English language, " +
+                "if it's \"RU\", it means Russian language. Provide the user based on learning type. If it's" +
+                " vocabulary, then provide german language vocabulary with translate of selected responses language and give pronunciation with English language in [] after the word," +
+                " if it's chat, then chat with the user in german language, despite of in what language, if it's " +
+                "text, then provide user with a short german story, and then its translate with response language.
+        `;
+
+        try {
+            spinner.style.display = 'block'; // Show spinner
+            const result = await model.generateContent(promptMsg);
+            const response = await result.response;
+            const responseText = await response.text();
+            
+            processResponse(responseText);
+        } catch (error) {
+            responseOutput.textContent = 'An error occurred: ' + error;
+        } finally {
+            spinner.style.display = 'none'; // Hide spinner
+        }
+    });
+
+    function processResponse(text) {
+        let cleanedText = text.replace(/\*/g, '');
+
+        const mapLinkPattern = /(https:\/\/www\.google\.com\/maps\/[^\s]+)/g;
+        cleanedText = cleanedText.replace(mapLinkPattern, (match) => {
+            return `<a href="${match}" target="_blank">${match}</a>`;
+        });
+
+        responseOutput.innerHTML = cleanedText;
+    }
+</script>
+
+</body>
+</html>
